@@ -2,22 +2,46 @@
  * @fileoverview test
  * @author msk
  */
-'use strict'
+"use strict";
+
+//------------------------------------------------------------------------------
+// Rule Definition
+//------------------------------------------------------------------------------
+
+/** @type {import('eslint').Rule.RuleModule} */
 module.exports = {
   meta: {
-    type: null, // `problem`, `suggestion`, or `layout`
+    type: "problem", // `problem`, `suggestion`, or `layout`
     docs: {
-      description: 'test',
+      description: "test",
       recommended: false,
-      url: null // URL to the documentation page for this rule
+      url: null, // URL to the documentation page for this rule
     },
-    fixable: null, // Or `code` or `whitespace`
-    schema: [] // Add a schema if the rule has options
+    fixable: "code", // Or `code` or `whitespace`
+    schema: [], // Add a schema if the rule has options
+    messages: {
+      unexpected: "不能用{{type}}",
+    },
   },
 
   create(context) {
+    const sourceCode = context.getSourceCode();
     return {
-      // visitor functions for different types of nodes
-    }
-  }
-}
+      VariableDeclaration(node) {
+        if (node.kind === "var") {
+          context.report({
+            node,
+            data: { type: "var" },
+            messageId: "unexpected",
+            fix(fixer) {
+              const varToken = sourceCode.getFirstToken(node, {
+                filter: (t) => t.value === "var",
+              });
+              return fixer.replaceText(varToken, "let");
+            },
+          });
+        }
+      },
+    };
+  },
+};
