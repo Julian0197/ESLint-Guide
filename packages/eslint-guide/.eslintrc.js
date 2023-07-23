@@ -4,8 +4,12 @@ module.exports = {
     // 'es2021': true,
     // 'node': true
   },
-  plugins: ["colint"],
+  // plugins: ["colint"],
+  // rules: {
+  //   "colint/no-var": ["error"],
+  // },
+
   rules: {
-    "colint/no-var": ["error"],
+    "no-var": ["error"],
   },
 };

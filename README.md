@@ -218,3 +218,104 @@ create(context) {
 ~~~
 
 最后运行`npx eslint test.js --fix`，完成修复，var => let。
+
+### 创建可共享的ESLint配置
+
+我们希望针对一些相同的项目只进行一次ESLint配置然后在其他项目中直接引用即可，这就是ESLint的共享配置，并且还可以把 ESLint 共享配置上传到 npm 服务器供其他人下载下来在其项目中安装使用。
+
+### ESLint 配置文件中 extends、plugin 及 rules 的区别
+
+在 packages 目录中再创建一个 `eslint-config-share` 目录用于创建 ESLint 共享配置。 进入 `eslint-config-share` 目录初始化项目，运行 `pnpm init`。在`index.js` 文件中进行以下配置：
+
+这里的`extends`相当于使用了`eslint-plugin-colint`插件的recommend下rules的配置选项。由于采用monorepo架构已经将该插件安装到工作区，所以可以直接拿到，一般情况eslint规则都会以npm包的形式发布。
+~~~js
+module.exports = {
+  extends: ['plugin:colint/recommended']
+}
+~~~
+
+修改`no-var.js`：
+~~~js
+module.exports = {
+  rules: requireIndex(__dirname + "/rules"),
+  configs: {
+    recommended: {
+      plugins: ['colint'],
+      rules: {
+        'colint/no-var': ['error']
+      }
+    }
+  }
+}
+~~~
+
+#### 规则rules
+
+ESLint 的核心就是它的规则，通过规则进行代码校验和代码修复。
+
+我们将刚刚编写的ESLint插件的`rules`文件夹放到`eslint-guide`测试目录下，对`.eslintrc.js`进行配置：
+
+~~~js
+module.exports = {
+    'rules': {
+        'no-var': ['error']
+    }
+}
+~~~
+
+在运行: `npx eslint test.js --rulesdir rules` `--rulesdir` 指定运行的规则目录
+
+可以发现rules可以在脱离ESLint插件框架后正常运行。但如果想讲插件共享给其他人，ESLint提供了`plugins`插件机制实现。
+
+#### plugins插件
+
+插件通常是针对某一种特定场景定义开发的一系列规则，例如 `eslint-plugin-vue` 就是针对 Vue 项目开发的 ESLint 插件，`eslint-plugin-prettier` 就是针对 Prettier 开发的 ESLint 插件。
+
+.eslintrc配置如下：
+~~~js
+// .eslintrc.js
+{
+  plugins: ['prettier'],
+  rules: {
+    // prettier
+  	'prettier/prettier': 'error',
+  }
+}
+~~~
+
+引入插件，需要在rules里指定需要的规则，也可以用插件本身推荐选项，需要进行下面的配置：
+
+~~~js
+// .eslintrc.js
+{
+  extends: ['plugin:vue/vue3-recommended']
+  // 即便在 extends 引用了推荐的配置选项，但你还是可以在 rules 选项中进行重新配置相关 rules。
+  rules: {
+    'vue/no-v-html': 'off'
+    }
+}
+~~~
+
+在 `extends` 选项中进行设置，其中 `plugin:` 表示这是一个插件，后面跟着的就是插件名称，`/` 后面表示的该插件配置集成选项，也就是该插件已经进行相关的 `rules` 设置，使用者只需要使用它推荐的就可以了。
+
+#### extends 继承
+
+`extends` 选项除了配置 ESLint 插件之外，还可以配置一个 `npm` 包，也可以理解为继承他人的 ESLint 配置方案，可以看成实际就是一份别人配置好的 `.eslintrc.js` 。
+
+**注意：**ESLint 的共享配置 npm 包必须是以 `eslint-config-xxx` 开头或者 `@xxx/eslint-config` 此种类型，其中 xxx 是具体的名字，这是 ESLint 共享配置 npm 包名称的约定。
+
+下面时 `element plus` ESlint配置的基础项：
+
+~~~js
+extends: [
+    'eslint:recommended',
+    'plugin:import/recommended', // 插件中的 extends
+    'plugin:eslint-comments/recommended',
+    'plugin:jsonc/recommended-with-jsonc',
+    'plugin:markdown/recommended',
+    'plugin:vue/vue3-recommended',
+    'plugin:@typescript-eslint/recommended',
+    'prettier',
+],
+~~~
+
