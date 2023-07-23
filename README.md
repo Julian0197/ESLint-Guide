@@ -319,3 +319,102 @@ extends: [
 ],
 ~~~
 
+### ESLint、Prettier 以及 EditorConfig 之间的协作
+
+ESLint作用：检查语法、发现问题、强制转化代码风格。进一步概括：
++ 代码风格问题
+  + 缩进限制
+  + 单双引号限制
+  + 关键字qiankun空格
+  + 末尾是否加逗号
++ 代码质量问题
+  + 参数重复
+  + 对象属性重复
+  + 变量定义后使用
+  + debugger，coonsole.log未删除
+
+一般用`ESLint`做代码校验，用`Prettier`强制转化代码风格。
+
+#### Prettier
+
+Prettier 不管你之前的代码是什么规则什么风格，Prettier 会去掉你代码里原先所有样式风格，然后用 Prettier 的格式**重新输出**。
+
+防止`Prettier`和`ESlint`已有的代码风格检测冲突，在`.eslintrc.js`文件下将`prettier`设为最后一个`extends`，才可以覆盖。
+
+~~~js
+// .eslintrc.js
+{
+  extends: ["prettier"] // 必须是最后一个，才能确保覆盖
+}
+~~~
+
+> Prettier如何工作？
+
+加载Prettier => 加载Prettier配置项(`.prettierrc.js`) => 合并配置项。
+
+~~~js
+// .prettierrc.js
+module.exports = {
+  tabWidth: 2,
+  useTabs: false,
+  semi: false, // 语句结尾统一不使用分号
+  singleQuote: true, // 全程使用单引号
+}
+~~~
+
+**`EditorConfig`** 有助于为不同 IDE 编辑器上处理同一项目的多个开发人员维护一致的编码风格。
+~~~js
+// .editcofig
+[*.{js,jsx,ts,tsx,vue}]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = 100
+quote_type = single
+~~~
+
+Prettier 通过 `editorconfig: true` 选项进行强制解析 `.editorconfig` 文件来确定要使用的配置选项，这样可以让 `Prettier` 和 `EditorConfig` 共享一些配置项，而不用在两个单独的配置文件中重复这些配置项。
+
+如果 Prettier 格式化出错了的话，那么就由 ESLint 进行报错(`context.report()`)，这样相当于统一了代码问题的来源。
+
+### 代码规范自动化设置
+
+我们一般都会进行 `VSCode` 的 `Worksapce` 选项设置，设置完后会在根目录下生成一个 `.vscode` 目录并且这个目录是提交到仓库中的，这样所有使用 VSCode 编辑器的人打开这个项目都会拥有相同的配置体验。
+
+在vscode使用相关lint工具可下载对应的插件，关于配置不再赘述，将重点关注**提交代码**时候的代码检查和格式化。
+
+#### 利用 Git Hooks 进行代码检查
+
+##### Husky
+
+`Husky` 是社区常用的 `Git Hooks` 工具，可以在你进行一些 Git 操作（如 commit/push）的时候自动执行一些  Node Script。Husky 支持所有 Git 钩子 。
+
+安装并完成自动配置后，在package.json中的scripts下会新增命令：`"prepare": "husky install"`
+
+意思就是说我们克隆代码安装完依赖后会自动执行 husky install 命令。
+
+在运行 `pnpm dlx husky-init` 命令之后同时也在根目录下创建 .husky 目录和相关文件.
+
+这个时候我们就可以在 `pre-commit` 文件中配置一些脚本命令了，让这些脚本命令在 `git commit` 之前执行。
+
+##### Lint-staged
+
+`Lint-staged`是一个用于优化代码审查流程的工具。它可以在提交代码前，仅对**暂存区**中的文件运行特定的脚本
+
+安装并在package.json中配置：
+
+~~~json
+"lint-staged": {
+    "*.{vue,js,ts,jsx,tsx,md,json}": "eslint --fix"
+}
+~~~
+
+然后在刚从创建的 .husky 目录中的 pre-commit 文件中配置如下脚本：
+~~~shell
+pnpm exec lint-staged
+~~~
+
+pnpm exec 是在项目范围内执行 shell 命令的意思。
+
